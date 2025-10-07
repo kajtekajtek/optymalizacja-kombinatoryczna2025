@@ -13,6 +13,8 @@
 # - graf może być przekazany przez użytkownika za pomocą pliku tekstowego
 #   (np. lista krawędzi).
 from Graph import Graph
+import networkx as nx
+import matplotlib.pyplot as plt
 
 def load_graph_from_file(file_path: str) -> Graph:
     with open(file_path, 'r') as f:
@@ -48,3 +50,26 @@ def print_statistics(graph: Graph):
 
 def print_matrix(graph: Graph):
     for row in graph.matrix: print(row)
+
+def print_graph(graph: Graph):
+    if graph.directed:
+        G = nx.DiGraph()
+    else:
+        G = nx.Graph()
+
+    for i in range(graph.n):
+        G.add_node(i)
+
+    for u in range(graph.n):
+        for v in range(graph.n):
+            if graph.matrix[u][v]:
+                if graph.directed:
+                    G.add_edge(u, v)
+                else:
+                    if u <= v and graph.matrix[u][v]:
+                        G.add_edge(u, v)
+
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=500, font_size=10, arrows=graph.directed)
+    plt.title("Graph visualization")
+    plt.show()

@@ -12,12 +12,13 @@
 # - Program powinien być odporny na błędy użytkownika.
 # - graf może być przekazany przez użytkownika za pomocą pliku tekstowego
 #   (np. lista krawędzi).
-from utils import load_graph_from_file, print_statistics, print_matrix
+from utils import load_graph_from_file, print_statistics, print_matrix, print_graph
 
 def main():
-    graph = load_graph_from_file('graphs/undirected_1.txt')
+    graph = load_graph_from_file('graphs/directed_1.txt')
     print_statistics(graph)
     print_matrix(graph)
+    print_graph(graph)
 
 if __name__ == "__main__":
     main()
