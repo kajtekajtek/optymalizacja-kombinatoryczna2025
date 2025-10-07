@@ -12,14 +12,17 @@
 # - Program powinien być odporny na błędy użytkownika.
 # - graf może być przekazany przez użytkownika za pomocą pliku tekstowego
 #   (np. lista krawędzi).
+from Graph import Graph
 
 def load_graph_from_file(file_path: str) -> Graph:
     with open(file_path, 'r') as f:
         lines = f.readlines()
 
+        print(lines[0].strip().lower())
+
         if lines[0].strip().lower() == 'd':
             directed = True
-        elif lines[0].strip().lower() == 'n':
+        elif lines[0].strip().lower() == 'u':
             directed = False
         else:
             raise ValueError('Error: first line must be "d" or "n"')
@@ -34,3 +37,14 @@ def load_graph_from_file(file_path: str) -> Graph:
 
         return graph
 
+def print_statistics(graph: Graph):
+    print(f"Number of nodes: {graph.get_number_of_nodes()}")
+    print(f"Number of edges: {graph.get_number_of_edges()}")
+    print(f"Number of even degree nodes: {graph.get_even_degree_count()}")
+    print(f"Number of odd degree nodes: {graph.get_odd_degree_count()}")
+    print(f"Minimum degree: {graph.get_min_degree()}")
+    print(f"Maximum degree: {graph.get_max_degree()}")
+    print(f"Sorted degrees: {graph.get_sorted_degrees()}")
+
+def print_matrix(graph: Graph):
+    for row in graph.matrix: print(row)
