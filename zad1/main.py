@@ -13,9 +13,14 @@
 # - graf może być przekazany przez użytkownika za pomocą pliku tekstowego
 #   (np. lista krawędzi).
 from utils import load_graph_from_file, print_statistics, print_matrix, print_graph
+import argparse
 
 def main():
-    graph = load_graph_from_file('graphs/directed_1.txt')
+    parser = argparse.ArgumentParser(description="Graph processing program")
+    parser.add_argument('filename', type=str, help='Path to the graph file')
+    args = parser.parse_args()
+
+    graph = load_graph_from_file(args.filename)
     print_statistics(graph)
     print_matrix(graph)
     print_graph(graph)
