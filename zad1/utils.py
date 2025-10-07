@@ -53,23 +53,23 @@ def print_matrix(graph: Graph):
 
 def print_graph(graph: Graph):
     if graph.directed:
-        G = nx.DiGraph()
+        nx_graph = nx.DiGraph()
     else:
-        G = nx.Graph()
+        nx_graph = nx.Graph()
 
     for i in range(graph.n):
-        G.add_node(i)
+        nx_graph.add_node(i)
 
     for u in range(graph.n):
         for v in range(graph.n):
             if graph.matrix[u][v]:
                 if graph.directed:
-                    G.add_edge(u, v)
+                    nx_graph.add_edge(u, v)
                 else:
                     if u <= v and graph.matrix[u][v]:
-                        G.add_edge(u, v)
+                        nx_graph.add_edge(u, v)
 
-    pos = nx.spring_layout(G)
-    nx.draw(G, pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=500, font_size=10, arrows=graph.directed)
+    pos = nx.spring_layout(nx_graph)
+    nx.draw(nx_graph, pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=500, font_size=10, arrows=graph.directed)
     plt.title("Graph visualization")
     plt.show()
