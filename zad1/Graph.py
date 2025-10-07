@@ -28,6 +28,18 @@ class Graph:
         if not self.directed:
             self.matrix[v][u] = 0
 
+    def add_node(self):
+        self.n += 1
+        self.matrix.append([0] * self.n)
+        for row in self.matrix:
+            row.append(0)
+
+    def remove_node(self, u: int):
+        self.n -= 1
+        self.matrix.pop(u)
+        for row in self.matrix:
+            row.pop(u)
+
     def get_degree(self, u: int) -> int:
         if self.directed:
             return self.get_out_degree(u) + self.get_in_degree(u)
