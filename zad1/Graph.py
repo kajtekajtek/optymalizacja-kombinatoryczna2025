@@ -66,3 +66,13 @@ class Graph:
 
     def get_sorted_degrees(self) -> list[int]:
         return sorted((self.get_degree(i) for i in range(self.n)), reverse=True)
+
+    def get_number_of_edges(self) -> int:
+        total = sum(sum(row) for row in self.matrix)
+        if not self.directed:
+            return total // 2
+        else:
+            return total
+    
+    def get_number_of_nodes(self) -> int:
+        return self.n
