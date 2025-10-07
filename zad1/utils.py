@@ -12,13 +12,25 @@
 # - Program powinien być odporny na błędy użytkownika.
 # - graf może być przekazany przez użytkownika za pomocą pliku tekstowego
 #   (np. lista krawędzi).
-from Graph import Graph
-from utils import load_graph_from_file
 
-def main():
-    graph = load_graph_from_file('directed_graph.txt')
-    print(graph.get_sorted_degrees())
-    for row in graph.matrix: print(row)
+def load_graph_from_file(file_path: str) -> Graph:
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
 
-if __name__ == "__main__":
-    main()
+        if lines[0].strip().lower() == 'd':
+            directed = True
+        elif lines[0].strip().lower() == 'n':
+            directed = False
+        else:
+            raise ValueError('Error: first line must be "d" or "n"')
+
+        lines = lines[1:]
+        n = max(max(map(int, line.split())) for line in lines) + 1
+
+        graph = Graph(n, directed)
+        for line in lines:
+            u, v = map(int, line.split())
+            graph.add_edge(u, v)
+
+        return graph
+
