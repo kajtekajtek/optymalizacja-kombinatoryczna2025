@@ -22,7 +22,14 @@ def main():
 def load_graph_from_file(file_path: str) -> Graph:
     with open(file_path, 'r') as f:
         lines = f.readlines()
-        directed = lines[0].strip().lower() == 'd'
+
+        if lines[0].strip().lower() == 'd':
+            directed = True
+        elif lines[0].strip().lower() == 'n':
+            directed = False
+        else:
+            raise ValueError('Error: first line must be "d" or "n"')
+
         lines = lines[1:]
         n = max(max(map(int, line.split())) for line in lines) + 1
 
