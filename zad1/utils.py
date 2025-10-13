@@ -51,7 +51,7 @@ def print_statistics(graph: Graph):
 def print_matrix(graph: Graph):
     for row in graph.matrix: print(row)
 
-def print_graph(graph: Graph):
+def save_graph_visualization_to_file(graph: Graph, file_path: str):
     if graph.directed:
         nx_graph = nx.DiGraph()
     else:
@@ -72,4 +72,7 @@ def print_graph(graph: Graph):
     pos = nx.spring_layout(nx_graph)
     nx.draw(nx_graph, pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=500, font_size=10, arrows=graph.directed)
     plt.title("Graph visualization")
-    plt.show()
+    
+    plt.savefig(file_path, dpi=300, bbox_inches='tight')
+    print(f"Graph saved to {file_path}")
+    plt.close()

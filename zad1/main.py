@@ -12,7 +12,7 @@
 # - Program powinien być odporny na błędy użytkownika.
 # - graf może być przekazany przez użytkownika za pomocą pliku tekstowego
 #   (np. lista krawędzi).
-from utils import load_graph_from_file, print_statistics, print_matrix, print_graph
+from utils import load_graph_from_file, print_statistics, print_matrix, save_graph_visualization_to_file
 import argparse
 
 def main():
@@ -23,7 +23,7 @@ def main():
     graph = load_graph_from_file(args.filename)
     print_statistics(graph)
     print_matrix(graph)
-    print_graph(graph)
+    save_graph_visualization_to_file(graph, 'graph_visualization.png')
 
 if __name__ == "__main__":
     main()
