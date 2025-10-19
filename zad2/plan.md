@@ -63,3 +63,10 @@ Each file format: lines with `u v capacity`
 - Track residual capacities: `residual[u][v] = capacity[u][v] - flow[u][v]`
 - Update flow along augmenting path
 - Repeat until no augmenting path exists
+
+## TO-DO
+- [x] Transform Graph.py into a FlowNetwork class with capacity matrix
+- [x] Implement Edmonds-Karp algorithm with BFS and vertex labelling
+- [ ] Update utils.py to load flow networks with u v capacity format
+- [ ] Udate main.py to run  max flow algorithm and display results
+- [ ] Create example network files
