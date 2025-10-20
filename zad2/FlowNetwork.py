@@ -32,17 +32,14 @@ class FlowNetwork:
         iteration = 0
         
         while True:
-            # find augmenting path using BFS
             result = self.bfs_find_augmenting_path(source, sink)
             
             if result is None:
-                # no more augmenting paths
                 break
             
             labels, bottleneck = result
             iteration += 1
             
-            # augment flow
             path = self.augment_flow(source, sink, labels, bottleneck)
             augmenting_paths.append((path, bottleneck))
             max_flow += bottleneck
@@ -62,7 +59,7 @@ class FlowNetwork:
         
         Label format: label[v] = (parent, edge_capacity, min_flow_to_v)
         """
-        # initialize labels: label[v] = (parent, edge_capacity, min_flow_to_v)
+        # label[v] = (parent, edge_capacity, min_flow_to_v)
         labels = {source: (None, float('inf'), float('inf'))}
         visited = {source}
         queue = deque([source])
@@ -70,30 +67,24 @@ class FlowNetwork:
         while queue:
             u = queue.popleft()
             
-            # if we reached the sink, we found an augmenting path
             if u == sink:
                 break
             
-            # check all neighbors
             for v in range(self.n):
                 residual_cap = self.get_residual_capacity(u, v)
                 
-                # if there's residual capacity and v is not visited
                 if residual_cap > 0 and v not in visited:
-                    # calculate min flow to v through this path
                     min_flow = min(labels[u][2], residual_cap)
                     labels[v] = (u, residual_cap, min_flow)
                     visited.add(v)
                     queue.append(v)
         
-        # if sink was reached, return labels and bottleneck flow
         if sink in labels:
             return labels, labels[sink][2]
         return None
     
     def augment_flow(self, source: int, sink: int, labels: dict, bottleneck: int):
         """Augment flow along the path from source to sink."""
-        # reconstruct path from sink to source
         path = []
         v = sink
         while v != source:
@@ -101,7 +92,6 @@ class FlowNetwork:
             path.append((parent, v))
             v = parent
         
-        # augment flow along the path
         for u, v in path:
             self.flow[u][v] += bottleneck
             self.flow[v][u] -= bottleneck
