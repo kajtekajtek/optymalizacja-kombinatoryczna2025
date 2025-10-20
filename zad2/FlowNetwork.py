@@ -12,7 +12,49 @@ class FlowNetwork:
     
     def get_residual_capacity(self, u: int, v: int) -> int:
         return self.capacity[u][v] - self.flow[u][v]
+
+    def get_flow_matrix(self) -> List[List[int]]:
+        return self.flow
     
+    def get_capacity_matrix(self) -> List[List[int]]:
+        return self.capacity
+    
+    def get_number_of_nodes(self) -> int:
+        return self.n   
+
+    def edmonds_karp(self, source: int, sink: int, verbose: bool = False) -> Tuple[int, List[Tuple[List, int]]]:
+        """
+        Find maximum flow from source to sink using Edmonds-Karp algorithm.
+        Returns tuple of (max_flow_value, list of augmenting paths with their flows).
+        """
+        max_flow = 0
+        augmenting_paths = []
+        iteration = 0
+        
+        while True:
+            # find augmenting path using BFS
+            result = self.bfs_find_augmenting_path(source, sink)
+            
+            if result is None:
+                # no more augmenting paths
+                break
+            
+            labels, bottleneck = result
+            iteration += 1
+            
+            # augment flow
+            path = self.augment_flow(source, sink, labels, bottleneck)
+            augmenting_paths.append((path, bottleneck))
+            max_flow += bottleneck
+            
+            if verbose:
+                print(f"\nIteration {iteration}:")
+                print(f"  Augmenting path: {' -> '.join(str(u) for u, _ in reversed(path))} -> {sink}")
+                print(f"  Bottleneck capacity: {bottleneck}")
+                print(f"  Current flow: {max_flow}")
+        
+        return max_flow, augmenting_paths
+
     def bfs_find_augmenting_path(self, source: int, sink: int) -> Optional[Tuple[dict, int]]:
         """
         Find augmenting path from source to sink using BFS with vertex labeling.
@@ -65,45 +107,3 @@ class FlowNetwork:
             self.flow[v][u] -= bottleneck
         
         return path
-    
-    def edmonds_karp(self, source: int, sink: int, verbose: bool = False) -> Tuple[int, List[Tuple[List, int]]]:
-        """
-        Find maximum flow from source to sink using Edmonds-Karp algorithm.
-        Returns tuple of (max_flow_value, list of augmenting paths with their flows).
-        """
-        max_flow = 0
-        augmenting_paths = []
-        iteration = 0
-        
-        while True:
-            # find augmenting path using BFS
-            result = self.bfs_find_augmenting_path(source, sink)
-            
-            if result is None:
-                # no more augmenting paths
-                break
-            
-            labels, bottleneck = result
-            iteration += 1
-            
-            # augment flow
-            path = self.augment_flow(source, sink, labels, bottleneck)
-            augmenting_paths.append((path, bottleneck))
-            max_flow += bottleneck
-            
-            if verbose:
-                print(f"\nIteration {iteration}:")
-                print(f"  Augmenting path: {' -> '.join(str(u) for u, _ in reversed(path))} -> {sink}")
-                print(f"  Bottleneck capacity: {bottleneck}")
-                print(f"  Current flow: {max_flow}")
-        
-        return max_flow, augmenting_paths
-    
-    def get_flow_matrix(self) -> List[List[int]]:
-        return self.flow
-    
-    def get_capacity_matrix(self) -> List[List[int]]:
-        return self.capacity
-    
-    def get_number_of_nodes(self) -> int:
-        return self.n
