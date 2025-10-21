@@ -46,6 +46,9 @@ class FlowNetwork:
             
             if verbose:
                 print(f"\nIteration {iteration}:")
+                print(f"  Labels:")
+                for v, label in labels.items():
+                    print(f"    L({v}) = ({label[0]}, {label[2]})")
                 print(f"  Augmenting path: {' -> '.join(str(u) for u, _ in reversed(path))} -> {sink}")
                 print(f"  Bottleneck capacity: {bottleneck}")
                 print(f"  Current flow: {max_flow}")
