@@ -1,227 +1,279 @@
-from TaskNetwork import TaskNetwork, Task
-import networkx as nx
-import matplotlib.pyplot as plt
-from typing import Dict, List, Tuple
+from Graph import Graph
+from typing import List, Tuple
 
-def load_task_network_from_file(file_path: str) -> TaskNetwork:
+def load_graph_from_file(file_path: str) -> Graph:
     """
-    Load task network from file.
+    Load graph from file.
+    
     Format:
-        First line: number of machines
-        Subsequent lines: task_id duration predecessor1 predecessor2 ...
+        First line: <num_vertices> <directed|undirected>
+        Second line (optional): vertex labels separated by spaces
+        Subsequent lines: <vertex1> <vertex2> (one edge per line)
+    
+    Args:
+        file_path: Path to the graph file
+        
+    Returns:
+        Graph object loaded from file
     """
     with open(file_path, 'r') as f:
-        lines = [line.strip() for line in f.readlines() if line.strip()]
+        lines = [line.strip() for line in f.readlines() if line.strip() and not line.strip().startswith('#')]
     
     if not lines:
         raise ValueError("File is empty")
     
-    # First line is number of machines
-    num_machines = int(lines[0])
+    # First line: number of vertices and graph type
+    first_line = lines[0].split()
+    num_vertices = int(first_line[0])
+    directed = first_line[1].lower() == 'directed' if len(first_line) > 1 else False
     
-    network = TaskNetwork()
-    network.num_machines = num_machines
+    graph = Graph(num_vertices, directed)
     
-    # Parse tasks
-    for line in lines[1:]:
+    current_line = 1
+    
+    # Check if second line contains vertex labels
+    if current_line < len(lines):
+        parts = lines[current_line].split()
+        # If the line doesn't contain exactly 2 integers, treat it as labels
+        try:
+            if len(parts) > 2:
+                # Looks like labels
+                graph.set_vertex_labels(parts)
+                current_line += 1
+        except:
+            pass
+    
+    # Parse edges
+    for line in lines[current_line:]:
         parts = line.split()
         if len(parts) < 2:
-            raise ValueError(f'Invalid line format: "{line}". Expected: task_id duration [predecessors...]')
+            continue
         
-        task_id = parts[0]
-        duration = int(parts[1])
-        predecessors = parts[2:] if len(parts) > 2 else []
+        # Try to parse as integers (indices) or as labels
+        try:
+            u = int(parts[0])
+            v = int(parts[1])
+        except ValueError:
+            # Try to find labels
+            try:
+                u = graph.vertex_labels.index(parts[0])
+                v = graph.vertex_labels.index(parts[1])
+            except ValueError:
+                print(f"Warning: Skipping invalid edge: {line}")
+                continue
         
-        network.add_task(task_id, duration, predecessors)
+        graph.add_edge(u, v)
     
-    return network
+    return graph
 
-def print_network_info(network: TaskNetwork):
-    print(f"Number of tasks: {len(network.tasks)}")
-    print(f"Number of machines: {network.num_machines}")
-    print(f"Network type: {network.network_type if network.network_type else 'Not built yet'}")
+def print_graph_info(graph: Graph):
+    """Print basic information about the graph."""
+    print(f"Graph type: {'Directed' if graph.directed else 'Undirected'}")
+    print(f"Number of vertices: {graph.num_vertices}")
+    
+    # Count edges
+    edge_count = 0
+    for i in range(graph.num_vertices):
+        for j in range(graph.num_vertices):
+            if graph.has_edge(i, j):
+                edge_count += 1
+    
+    if not graph.directed:
+        edge_count //= 2  # Each undirected edge is counted twice
+    
+    print(f"Number of edges: {edge_count}")
     print()
 
-def print_tasks(network: TaskNetwork):
-    print("Tasks:")
-    print(f"{'ID':<10} {'Duration':<10} {'Predecessors':<30}")
-    print("=" * 50)
-    for task_id, task in sorted(network.tasks.items()):
-        pred_str = ', '.join(task.predecessors) if task.predecessors else 'None'
-        print(f"{task_id:<10} {task.duration:<10} {pred_str:<30}")
+def print_adjacency_matrix(graph: Graph):
+    """Print the adjacency matrix of the graph."""
+    print("Adjacency Matrix:")
+    print("    " + " ".join(f"{label:>3}" for label in graph.vertex_labels))
+    
+    for i in range(graph.num_vertices):
+        row_str = f"{graph.vertex_labels[i]:>3} "
+        for j in range(graph.num_vertices):
+            row_str += f"{graph.adj_matrix[i][j]:>3} "
+        print(row_str)
     print()
 
-def print_cpm_results(network: TaskNetwork):
-    print(f"\n{'='*80}")
-    print(f"CRITICAL PATH METHOD RESULTS")
-    print(f"{'='*80}")
-    print(f"Project makespan: {network.get_makespan()}")
-    print(f"\n{'Task':<10} {'Duration':<10} {'ES':<8} {'EF':<8} {'LS':<8} {'LF':<8} {'Slack':<8} {'Critical':<10}")
-    print("=" * 80)
+def print_c3_result(graph: Graph, has_c3: bool, method: str):
+    """Print the result of C_3 detection."""
+    print(f"{'='*60}")
+    print(f"C_3 Detection Result ({method})")
+    print(f"{'='*60}")
     
-    for task_id, task in sorted(network.tasks.items()):
-        critical = "YES" if task.is_critical() else "NO"
-        print(f"{task_id:<10} {task.duration:<10} {task.earliest_start:<8} {task.earliest_finish:<8} "
-              f"{task.latest_start:<8} {task.latest_finish:<8} {task.slack:<8} {critical:<10}")
-    print("=" * 80)
-
-def print_critical_path(network: TaskNetwork):
-    critical_path = network.find_critical_path()
-    
-    print(f"\n{'='*80}")
-    print(f"CRITICAL PATH")
-    print(f"{'='*80}")
-    print(f"Critical path length: {network.get_makespan()}")
-    print(f"Critical path: {' -> '.join(critical_path)}")
-    print(f"Number of critical tasks: {len(critical_path)}")
-    print("=" * 80)
-
-def print_schedule(network: TaskNetwork, schedule: Dict[int, List[Tuple[str, int, int]]]):
-    print(f"\n{'='*80}")
-    print(f"MACHINE SCHEDULE (by earliest start times)")
-    print(f"{'='*80}")
-    
-    for machine_id in sorted(schedule.keys()):
-        tasks = schedule[machine_id]
-        print(f"\nMachine {machine_id}:")
-        if not tasks:
-            print("  No tasks assigned")
-        else:
-            for task_id, start, end in tasks:
-                duration = network.tasks[task_id].duration
-                critical = "*" if network.tasks[task_id].is_critical() else " "
-                print(f"  {critical} Task {task_id}: time [{start}, {end}] (duration: {duration})")
-    
-    print(f"\n{'='*80}")
-    print(f"Total makespan: {network.get_makespan()}")
-    print(f"{'='*80}\n")
-
-def save_task_network_visualization(network: TaskNetwork, file_path: str):
-    if network.network_type == 'AN':
-        _save_AN_visualization(network, file_path)
-    elif network.network_type == 'AA':
-        _save_AA_visualization(network, file_path)
+    if has_c3:
+        print("✓ Graph CONTAINS at least one C_3 cycle (triangle)")
     else:
-        print("Network not built yet. Cannot visualize.")
+        print("✗ Graph DOES NOT contain any C_3 cycle (triangle)")
+    
+    print(f"{'='*60}")
+    print()
 
-def _save_AN_visualization(network: TaskNetwork, file_path: str):
-    G = nx.DiGraph()
+def print_c3_cycles(graph: Graph, cycles: List[Tuple[int, int, int]]):
+    """Print all found C_3 cycles."""
+    if not cycles:
+        print("No C_3 cycles found.")
+        return
     
-    # Add nodes (tasks)
-    for task_id, task in network.tasks.items():
-        label = f"{task_id}\nD:{task.duration}\nES:{task.earliest_start}\nLS:{task.latest_start}"
-        color = 'red' if task.is_critical() else 'lightblue'
-        G.add_node(task_id, label=label, color=color)
+    print(f"\nFound {len(cycles)} C_3 cycle(s):")
+    print(f"{'='*60}")
     
-    # Add edges (precedence)
-    for task_id, successors in network.graph.items():
-        for succ_id in successors:
-            G.add_edge(task_id, succ_id)
+    for i, (u, v, w) in enumerate(cycles, 1):
+        label_u = graph.vertex_labels[u]
+        label_v = graph.vertex_labels[v]
+        label_w = graph.vertex_labels[w]
+        print(f"{i}. Triangle: {label_u} - {label_v} - {label_w}")
+        print(f"   Vertex indices: ({u}, {v}, {w})")
     
-    # Draw
-    pos = nx.spring_layout(G, k=2, iterations=50)
-    colors = [G.nodes[node]['color'] for node in G.nodes()]
-    labels = {node: G.nodes[node]['label'] for node in G.nodes()}
-    
-    plt.figure(figsize=(14, 10))
-    nx.draw(G, pos, labels=labels, node_color=colors, node_size=3000, 
-            font_size=8, font_weight='bold', arrows=True, arrowsize=20)
-    
-    plt.title(f"Activity-on-Node Network\nMakespan: {network.get_makespan()}", fontsize=14)
-    plt.savefig(file_path, dpi=300, bbox_inches='tight')
-    print(f"Visualization saved to {file_path}")
-    plt.close()
+    print(f"{'='*60}")
+    print()
 
-def _save_AA_visualization(network: TaskNetwork, file_path: str):
-    G = nx.DiGraph()
+def print_single_c3_cycle(graph: Graph, cycle: Tuple[int, int, int]):
+    """Print a single C_3 cycle."""
+    print(f"\nFound C_3 cycle:")
+    print(f"{'='*60}")
     
-    # Add nodes (events)
-    for node in network.graph.keys():
-        G.add_node(node)
+    u, v, w = cycle
+    label_u = graph.vertex_labels[u]
+    label_v = graph.vertex_labels[v]
+    label_w = graph.vertex_labels[w]
     
-    # Add edges (tasks and dummy tasks)
-    edge_labels = {}
-    edge_colors = []
+    print(f"Triangle: {label_u} - {label_v} - {label_w}")
+    print(f"Vertex indices: ({u}, {v}, {w})")
     
-    for start_node, end_nodes in network.graph.items():
-        for end_node in end_nodes:
-            arc = (start_node, end_node)
-            task_id = network.arc_to_task.get(arc)
-            
-            if task_id and task_id not in network.dummy_tasks:
-                task = network.tasks[task_id]
-                label = f"{task_id}({task.duration})"
-                edge_labels[arc] = label
-                color = 'red' if task.is_critical() else 'black'
-                edge_colors.append(color)
-                G.add_edge(start_node, end_node, weight=task.duration)
-            else:
-                # Dummy arc
-                edge_labels[arc] = "dummy"
-                edge_colors.append('gray')
-                G.add_edge(start_node, end_node, weight=0, style='dashed')
+    if graph.directed:
+        print("\nEdges in the cycle:")
+        if graph.has_edge(u, v) and graph.has_edge(v, w) and graph.has_edge(w, u):
+            print(f"  {label_u} → {label_v}")
+            print(f"  {label_v} → {label_w}")
+            print(f"  {label_w} → {label_u}")
+        else:
+            print(f"  {label_u} → {label_w}")
+            print(f"  {label_w} → {label_v}")
+            print(f"  {label_v} → {label_u}")
+    else:
+        print("\nEdges in the triangle:")
+        print(f"  {label_u} - {label_v}")
+        print(f"  {label_v} - {label_w}")
+        print(f"  {label_w} - {label_u}")
     
-    # Draw
-    pos = nx.spring_layout(G, k=3, iterations=50)
-    
-    plt.figure(figsize=(14, 10))
-    nx.draw(G, pos, with_labels=True, node_color='lightblue', 
-            node_size=1500, font_size=10, font_weight='bold',
-            edge_color=edge_colors, arrows=True, arrowsize=20, width=2)
-    
-    nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=8)
-    
-    plt.title(f"Activity-on-Arc Network\nMakespan: {network.get_makespan()}", fontsize=14)
-    plt.savefig(file_path, dpi=300, bbox_inches='tight')
-    print(f"Visualization saved to {file_path}")
-    plt.close()
+    print(f"{'='*60}")
+    print()
 
-def save_gantt_chart(network: TaskNetwork, schedule: Dict[int, List[Tuple[str, int, int]]], file_path: str):
-    fig, ax = plt.subplots(figsize=(14, 8))
+def print_matrix_multiplication_demo(graph: Graph):
+    """Demonstrate the matrix multiplication approach."""
+    print(f"\n{'='*60}")
+    print("Matrix Multiplication Approach Demonstration")
+    print(f"{'='*60}")
     
-    # Prepare data
-    colors = []
-    for task in network.tasks.values():
-        colors.append('red' if task.is_critical() else 'skyblue')
+    print("\nAdjacency Matrix A:")
+    print_matrix(graph.adj_matrix, graph.vertex_labels)
     
-    task_to_color = {task_id: ('red' if task.is_critical() else 'skyblue') 
-                     for task_id, task in network.tasks.items()}
+    # Calculate A^2
+    A2 = graph.multiply_matrices(graph.adj_matrix, graph.adj_matrix)
+    print("\nA² (number of paths of length 2):")
+    print_matrix(A2, graph.vertex_labels)
     
-    # Plot bars for each machine
-    y_pos = 0
-    yticks = []
-    ylabels = []
+    # Calculate A^3
+    A3 = graph.multiply_matrices(A2, graph.adj_matrix)
+    print("\nA³ (number of paths of length 3):")
+    print_matrix(A3, graph.vertex_labels)
     
-    for machine_id in sorted(schedule.keys()):
-        tasks = schedule[machine_id]
-        yticks.append(y_pos)
-        ylabels.append(f"Machine {machine_id}")
-        
-        for task_id, start, end in tasks:
-            duration = end - start
-            color = task_to_color[task_id]
-            ax.barh(y_pos, duration, left=start, height=0.6, 
-                   color=color, edgecolor='black', linewidth=1)
-            ax.text(start + duration/2, y_pos, task_id, 
-                   ha='center', va='center', fontsize=9, fontweight='bold')
-        
-        y_pos += 1
+    # Show trace
+    trace = sum(A3[i][i] for i in range(graph.num_vertices))
+    print(f"\nTrace of A³: {trace}")
     
-    ax.set_yticks(yticks)
-    ax.set_yticklabels(ylabels)
-    ax.set_xlabel('Time', fontsize=12)
-    ax.set_title(f'Gantt Chart - Machine Schedule\nMakespan: {network.get_makespan()}', fontsize=14)
-    ax.grid(axis='x', alpha=0.3)
+    if not graph.directed:
+        num_triangles = trace // 6
+        print(f"Number of triangles: {trace} / 6 = {num_triangles}")
+        print("(Each triangle is counted 6 times in undirected graphs)")
+    else:
+        num_cycles = trace // 3
+        print(f"Number of C_3 cycles: {trace} / 3 = {num_cycles}")
+        print("(Each cycle is counted 3 times in directed graphs)")
     
-    # Add legend
-    from matplotlib.patches import Patch
-    legend_elements = [
-        Patch(facecolor='red', edgecolor='black', label='Critical tasks'),
-        Patch(facecolor='skyblue', edgecolor='black', label='Non-critical tasks')
-    ]
-    ax.legend(handles=legend_elements, loc='upper right')
+    print(f"{'='*60}")
+    print()
+
+def print_matrix(matrix: List[List[int]], labels: List[str]):
+    """Print a matrix with labels."""
+    n = len(matrix)
     
-    plt.tight_layout()
-    plt.savefig(file_path, dpi=300, bbox_inches='tight')
-    print(f"Gantt chart saved to {file_path}")
-    plt.close()
+    # Determine column width based on maximum value
+    max_val = max(max(row) for row in matrix)
+    width = max(3, len(str(max_val)) + 1)
+    
+    # Header
+    print("    " + " ".join(f"{label:>{width}}" for label in labels))
+    
+    # Rows
+    for i in range(n):
+        row_str = f"{labels[i]:>3} "
+        for j in range(n):
+            row_str += f"{matrix[i][j]:>{width}} "
+        print(row_str)
+
+def create_sample_graphs():
+    """Create sample graph files for testing."""
+    import os
+    
+    # Create graphs directory if it doesn't exist
+    os.makedirs('graphs', exist_ok=True)
+    
+    # Sample 1: Simple triangle (undirected)
+    with open('graphs/triangle.txt', 'w') as f:
+        f.write("# Simple triangle graph\n")
+        f.write("3 undirected\n")
+        f.write("A B C\n")
+        f.write("0 1\n")
+        f.write("1 2\n")
+        f.write("2 0\n")
+    
+    # Sample 2: Graph with multiple triangles (undirected)
+    with open('graphs/multiple_triangles.txt', 'w') as f:
+        f.write("# Graph with multiple triangles\n")
+        f.write("5 undirected\n")
+        f.write("A B C D E\n")
+        f.write("0 1\n")
+        f.write("1 2\n")
+        f.write("2 0\n")
+        f.write("2 3\n")
+        f.write("3 4\n")
+        f.write("4 2\n")
+        f.write("0 3\n")
+    
+    # Sample 3: Graph without triangles (undirected)
+    with open('graphs/no_triangles.txt', 'w') as f:
+        f.write("# Graph without triangles (tree)\n")
+        f.write("5 undirected\n")
+        f.write("A B C D E\n")
+        f.write("0 1\n")
+        f.write("0 2\n")
+        f.write("1 3\n")
+        f.write("1 4\n")
+    
+    # Sample 4: Directed graph with cycle
+    with open('graphs/directed_cycle.txt', 'w') as f:
+        f.write("# Directed graph with C_3 cycle\n")
+        f.write("4 directed\n")
+        f.write("A B C D\n")
+        f.write("0 1\n")
+        f.write("1 2\n")
+        f.write("2 0\n")
+        f.write("1 3\n")
+        f.write("3 2\n")
+    
+    # Sample 5: Complete graph K4
+    with open('graphs/complete_k4.txt', 'w') as f:
+        f.write("# Complete graph K4 (contains 4 triangles)\n")
+        f.write("4 undirected\n")
+        f.write("A B C D\n")
+        f.write("0 1\n")
+        f.write("0 2\n")
+        f.write("0 3\n")
+        f.write("1 2\n")
+        f.write("1 3\n")
+        f.write("2 3\n")
+    
+    print("Sample graph files created in 'graphs/' directory")

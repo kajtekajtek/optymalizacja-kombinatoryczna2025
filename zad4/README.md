@@ -1,193 +1,363 @@
-# Critical Path Method (CPM) - Task Scheduling
+# Zadanie 4 - Wyszukiwanie podgrafu C_3
 
-This project implements the Critical Path Method for project scheduling and analysis.
+Implementation of C_3 cycle (triangle) detection in graphs using adjacency matrix representation.
 
-## Features
+## Zadanie
 
-- **Network Construction**: Supports both Activity-on-Node (AN) and Activity-on-Arc (AA) networks
-- **CPM Analysis**: Calculates earliest/latest start and finish times for all tasks
-- **Critical Path**: Identifies the critical path and critical tasks
-- **Machine Scheduling**: Assigns tasks to machines based on earliest start times
-- **Visualization**: Generates network diagrams and Gantt charts
+W oparciu o reprezentację grafu prostego w postaci macierzy sąsiedztwa zaimplementować procedurę, która sprawdza, czy graf zawiera podgraf izomorficzny do cyklu C_3:
+- Wersja naiwna - 1 punkt
+- Wypisanie co najmniej jednego cyklu C3 o ile istnieje - 1 punkt
+- Wersja w oparciu o mnożenie macierzy - 2 punkty
 
-## Input Format
+**Uwaga:** Mnożenie macierzy zaimplementowane samodzielnie (bez bibliotek numpy itp.).
 
-Input files should follow this format:
+## Opis rozwiązania
+
+### C_3 Cycle (Triangle)
+C_3 to cykl o 3 wierzchołkach, zwany również trójkątem. W grafie nieskierowanym to trzy wierzchołki połączone wzajemnie krawędziami. W grafie skierowanym to cykl kierowany przechodzący przez 3 wierzchołki.
+
+### Zaimplementowane metody
+
+#### 1. Metoda naiwna (`has_c3_naive()`)
+**Złożoność:** O(n³)
+
+Sprawdza wszystkie możliwe trójki wierzchołków (i, j, k) gdzie i < j < k i weryfikuje czy tworzą trójkąt.
+
+Dla grafu nieskierowanego sprawdza istnienie krawędzi:
+- (i, j)
+- (j, k)
+- (k, i)
+
+#### 2. Znajdowanie cykli (`find_one_c3_naive()`, `find_all_c3_naive()`)
+Dodatkowo do wykrywania istnienia, implementacja potrafi:
+- Znaleźć jeden cykl C_3
+- Znaleźć wszystkie cykle C_3 w grafie
+
+#### 3. Metoda mnożenia macierzy (`has_c3_matrix()`)
+**Złożoność:** O(n³)
+
+Wykorzystuje matematyczną własność macierzy sąsiedztwa:
+- A² zawiera liczbę ścieżek długości 2 między wierzchołkami
+- A³ zawiera liczbę ścieżek długości 3 między wierzchołkami
+- Elementy diagonalne A³ pokazują liczbę cykli długości 3 rozpoczynających się w danym wierzchołku
+
+**Dla grafu nieskierowanego:**
+- Każdy trójkąt jest liczony 6 razy (2 kierunki × 3 wierzchołki startowe)
+- Liczba trójkątów = trace(A³) / 6
+
+**Dla grafu skierowanego:**
+- Każdy cykl jest liczony 3 razy (raz dla każdego wierzchołka startowego)
+- Liczba cykli = trace(A³) / 3
+
+**Implementacja własna mnożenia macierzy:**
+```python
+def multiply_matrices(A, B):
+    n = len(A)
+    m = len(B)
+    p = len(B[0])
+    result = [[0 for _ in range(p)] for _ in range(n)]
+    
+    for i in range(n):
+        for j in range(p):
+            for k in range(m):
+                result[i][j] += A[i][k] * B[k][j]
+    
+    return result
 ```
-<number_of_machines>
-<task_id> <duration> [predecessor1] [predecessor2] ...
-<task_id> <duration> [predecessor1] [predecessor2] ...
+
+## Format plików wejściowych
+
+```
+<liczba_wierzchołków> <directed|undirected>
+[opcjonalnie: etykiety wierzchołków oddzielone spacjami]
+<wierzchołek1> <wierzchołek2>
+<wierzchołek1> <wierzchołek2>
 ...
 ```
 
-### Example Input File
+### Przykład
 
 ```
-3
-A 3
-B 4 A
-C 2 A
-D 5 B C
-E 3 D
-F 2 C
-G 4 E F
+3 undirected
+A B C
+0 1
+1 2
+2 0
 ```
 
-This defines:
-- 3 machines available
-- 7 tasks (A through G)
-- Task A has duration 3 and no predecessors
-- Task B has duration 4 and depends on A
-- Task D depends on both B and C
-- etc.
+Tworzy prosty trójkąt z trzech wierzchołków A, B, C.
 
-## Usage
+## Użycie
 
-Basic usage:
+### Podstawowe użycie
+
 ```bash
-python main.py <task_file> --network-type <AN|AA>
+python main.py graphs/triangle.txt
 ```
 
-### Options
+### Tylko metoda naiwna
 
-- `filename`: Path to the task file (required)
-- `--network-type <AN|AA>`: Type of network to build (default: AN)
-  - `AN`: Activity-on-Node network (tasks are nodes)
-  - `AA`: Activity-on-Arc network (tasks are arcs)
-- `--verbose`, `-v`: Show detailed task information
-- `--visualize`: Generate visualization images (network graph and Gantt chart)
-
-### Examples
-
-1. Run CPM with Activity-on-Node network:
 ```bash
-python main.py task_networks/tasks_1.txt --network-type AN
+python main.py graphs/triangle.txt --method naive
 ```
 
-2. Run with Activity-on-Arc network and verbose output:
+### Tylko metoda mnożenia macierzy
+
 ```bash
-python main.py task_networks/tasks_1.txt --network-type AA --verbose
+python main.py graphs/triangle.txt --method matrix
 ```
 
-3. Generate visualizations:
+### Pokaż wszystkie cykle C_3
+
 ```bash
-python main.py task_networks/tasks_1.txt --network-type AN --visualize
+python main.py graphs/multiple_triangles.txt --show-all
 ```
 
-## Output
+### Tryb szczegółowy (pokazuje macierz sąsiedztwa)
 
-The program provides:
+```bash
+python main.py graphs/triangle.txt --verbose
+```
 
-### 1. CPM Results Table
-Shows for each task:
-- Duration
-- Earliest Start (ES) and Finish (EF) times
-- Latest Start (LS) and Finish (LF) times
-- Slack time (LS - ES)
-- Whether task is critical (slack = 0)
+### Demonstracja mnożenia macierzy
 
-### 2. Critical Path
-Lists the sequence of critical tasks that determine the minimum project duration.
+```bash
+python main.py graphs/triangle.txt --demo
+```
 
-### 3. Machine Schedule
-Shows task assignments to machines with start and end times. Critical tasks are marked with an asterisk (*).
+Pokazuje krok po kroku:
+- Macierz A (macierz sąsiedztwa)
+- Macierz A² (ścieżki długości 2)
+- Macierz A³ (ścieżki długości 3)
+- Obliczenie liczby trójkątów
 
-### 4. Project Makespan
-The total project duration (length of the critical path).
+### Benchmark
 
-### 5. Visualizations (optional)
-When `--visualize` is used:
-- `task_network_an.png` or `task_network_aa.png`: Network diagram
-- `gantt_chart.png`: Gantt chart showing task scheduling on machines
+```bash
+python main.py graphs/complete_k4.txt --benchmark
+```
 
-## Example Output
+Porównuje wydajność obu metod.
+
+### Tworzenie przykładowych plików
+
+```bash
+python main.py --create-samples
+```
+
+Tworzy katalog `graphs/` z przykładowymi grafami:
+- `triangle.txt` - prosty trójkąt
+- `multiple_triangles.txt` - graf z wieloma trójkątami
+- `no_triangles.txt` - graf bez trójkątów (drzewo)
+- `directed_cycle.txt` - graf skierowany z cyklem C_3
+- `complete_k4.txt` - graf pełny K₄ (zawiera 4 trójkąty)
+
+## Przykłady grafów
+
+### 1. Prosty trójkąt (triangle.txt)
+
+```
+3 undirected
+A B C
+0 1
+1 2
+2 0
+```
+
+Graf:
+```
+  A --- B
+   \   /
+    \ /
+     C
+```
+
+**Wynik:** 1 trójkąt: (A, B, C)
+
+### 2. Graf z wieloma trójkątami (multiple_triangles.txt)
+
+```
+5 undirected
+A B C D E
+0 1
+1 2
+2 0
+2 3
+3 4
+4 2
+0 3
+```
+
+Graf:
+```
+  A --- B
+  |\   /|
+  | \ / |
+  |  C  |
+  | /|\ |
+  |/ | \|
+  D--+--E
+```
+
+**Wynik:** 3 trójkąty
+
+### 3. Graf bez trójkątów (no_triangles.txt)
+
+```
+5 undirected
+A B C D E
+0 1
+0 2
+1 3
+1 4
+```
+
+Graf (drzewo):
+```
+      A
+     / \
+    B   C
+   / \
+  D   E
+```
+
+**Wynik:** 0 trójkątów
+
+### 4. Graf pełny K₄ (complete_k4.txt)
+
+```
+4 undirected
+A B C D
+0 1
+0 2
+0 3
+1 2
+1 3
+2 3
+```
+
+Graf pełny K₄:
+```
+  A ---- B
+  |\    /|
+  | \  / |
+  |  \/  |
+  |  /\  |
+  | /  \ |
+  |/    \|
+  D ---- C
+```
+
+**Wynik:** 4 trójkąty: (A,B,C), (A,B,D), (A,C,D), (B,C,D)
+
+## Przykładowe wyjście
 
 ```
 ================================================================================
-CRITICAL PATH METHOD RESULTS
-================================================================================
-Project makespan: 19
-
-Task       Duration   ES       EF       LS       LF       Slack    Critical  
-================================================================================
-A          3          0        3        0        3        0        YES       
-B          4          3        7        3        7        0        YES       
-C          2          3        5        5        7        2        NO        
-D          5          7        12       7        12       0        YES       
-E          3          12       15       12       15       0        YES       
-F          2          5        7        13       15       8        NO        
-G          4          15       19       15       19       0        YES       
+C_3 CYCLE (TRIANGLE) DETECTION IN GRAPHS
 ================================================================================
 
-================================================================================
-CRITICAL PATH
-================================================================================
-Critical path length: 19
-Critical path: A -> B -> D -> E -> G
-Number of critical tasks: 5
-================================================================================
+Loading graph from: graphs/complete_k4.txt
+Graph loaded successfully.
+
+Graph type: Undirected
+Number of vertices: 4
+Number of edges: 6
 
 ================================================================================
-MACHINE SCHEDULE (by earliest start times)
+METHOD 1: NAIVE APPROACH
 ================================================================================
+Checking all possible triples of vertices...
 
-Machine 0:
-  * Task A: time [0, 3] (duration: 3)
-  * Task B: time [3, 7] (duration: 4)
-  * Task D: time [7, 12] (duration: 5)
-  * Task E: time [12, 15] (duration: 3)
-  * Task G: time [15, 19] (duration: 4)
+============================================================
+C_3 Detection Result (Naive)
+============================================================
+✓ Graph CONTAINS at least one C_3 cycle (triangle)
+============================================================
 
-Machine 1:
-    Task C: time [3, 5] (duration: 2)
-    Task F: time [5, 7] (duration: 2)
+Found C_3 cycle:
+============================================================
+Triangle: A - B - C
+Vertex indices: (0, 1, 2)
 
-Machine 2:
-  No tasks assigned
+Edges in the triangle:
+  A - B
+  B - C
+  C - A
+============================================================
 
 ================================================================================
-Total makespan: 19
+METHOD 2: MATRIX MULTIPLICATION APPROACH
+================================================================================
+Using A³ to detect cycles...
+
+============================================================
+C_3 Detection Result (Matrix Multiplication)
+============================================================
+✓ Graph CONTAINS at least one C_3 cycle (triangle)
+============================================================
+
+Number of C_3 cycles: 4
+
+Found C_3 cycle:
+============================================================
+Triangle: A - B - C
+Vertex indices: (0, 1, 2)
+
+Edges in the triangle:
+  A - B
+  B - C
+  C - A
+============================================================
+
+================================================================================
+Analysis complete.
 ================================================================================
 ```
 
-## Implementation Details
+## Pliki projektu
 
-### Classes
+- `Graph.py` - Klasa Graph z implementacją wszystkich metod wykrywania C_3
+- `utils.py` - Funkcje pomocnicze (wczytywanie, wyświetlanie, tworzenie przykładów)
+- `main.py` - Interfejs wiersza poleceń
+- `graphs/` - Katalog z przykładowymi grafami
+- `README.md` - Ten plik
+- `polecenie.md` - Treść zadania
 
-- **Task**: Represents a single task with duration, predecessors, and timing information
-- **TaskNetwork**: Main class for CPM analysis
-  - Manages tasks and network structure
-  - Builds AN or AA networks
-  - Performs forward/backward pass calculations
-  - Generates machine schedules
+## Struktura klasy Graph
 
-### Key Methods
+```python
+class Graph:
+    # Naive methods
+    has_c3_naive() -> bool
+    find_one_c3_naive() -> Optional[Tuple[int, int, int]]
+    find_all_c3_naive() -> List[Tuple[int, int, int]]
+    
+    # Matrix methods
+    multiply_matrices(A, B) -> List[List[int]]
+    has_c3_matrix() -> bool
+    count_c3_matrix() -> int
+    find_one_c3_matrix() -> Optional[Tuple[int, int, int]]
+    find_all_c3_matrix_assisted() -> List[Tuple[int, int, int]]
+```
 
-- `build_AN_network()`: Constructs Activity-on-Node network
-- `build_AA_network()`: Constructs Activity-on-Arc network
-- `calculate_earliest_times()`: Forward pass (topological sort)
-- `calculate_latest_times()`: Backward pass (reverse topological sort)
-- `find_critical_path()`: Identifies critical tasks
-- `create_schedule()`: Assigns tasks to machines using greedy algorithm
+## Złożoność obliczeniowa
 
-## Files
+| Metoda | Złożoność czasowa | Złożoność pamięciowa |
+|--------|-------------------|----------------------|
+| Naive - wykrywanie | O(n³) | O(1) |
+| Naive - znajdowanie wszystkich | O(n³) | O(k) gdzie k to liczba trójkątów |
+| Matrix - wykrywanie | O(n³) | O(n²) |
+| Matrix - liczenie | O(n³) | O(n²) |
+| Matrix - znajdowanie | O(n³) | O(n² + k) |
 
-- `main.py`: Command-line interface
-- `TaskNetwork.py`: Core CPM implementation
-- `utils.py`: Utility functions for I/O and visualization
-- `task_networks/`: Directory containing example task files
-- `README.md`: This file
+**Uwaga:** Obie metody mają złożoność O(n³), ale metoda macierzowa może być optymalizowana przez wykorzystanie szybszych algorytmów mnożenia macierzy (np. Strassen O(n^2.807)).
 
-## Requirements
+## Wymagania
 
 - Python 3.6+
-- networkx (for visualization)
-- matplotlib (for visualization)
+- Brak zewnętrznych bibliotek (czyste Python)
 
-## Notes
+## Autor
 
-- The Activity-on-Node (AN) network is the recommended and more commonly used representation
-- The machine scheduling uses a greedy approach based on earliest start times
-- Critical tasks (slack = 0) are marked with an asterisk (*) in the schedule
-- Visualization files are saved in the current directory
-
+Implementacja wykonana w ramach kursu Optymalizacji Kombinatorycznej 2025.
